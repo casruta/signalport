@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -8,11 +9,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
 } from 'recharts';
 import type { PortfolioSnapshot } from '@/types';
 
 interface Props {
   data: PortfolioSnapshot[];
+  costBasis?: number;
 }
 
 function formatAxisDate(dateStr: string) {
@@ -28,7 +31,10 @@ function formatUSD(v: number) {
   }).format(v);
 }
 
-export function PortfolioChart({ data }: Props) {
+export function PortfolioChart({ data, costBasis }: Props) {
+  const uid = useId();
+  const fillId = `portfolioGrad-${uid.replace(/:/g, '')}`;
+
   const startValue = data[0]?.totalValue ?? 0;
   const endValue   = data[data.length - 1]?.totalValue ?? 0;
   const gain       = endValue - startValue;
@@ -36,7 +42,6 @@ export function PortfolioChart({ data }: Props) {
   const isPositive = gain >= 0;
 
   const strokeColor = isPositive ? '#34d399' : '#f87171';
-  const fillId = 'portfolioGradient';
 
   return (
     <div className="card h-full">
@@ -103,6 +108,20 @@ export function PortfolioChart({ data }: Props) {
             dot={false}
             activeDot={{ r: 4, fill: strokeColor, stroke: 'none' }}
           />
+          {costBasis && costBasis > 0 && (
+            <ReferenceLine
+              y={costBasis}
+              stroke="#f59e0b"
+              strokeDasharray="4 3"
+              strokeWidth={1.5}
+              label={{
+                value: `Cost basis ${formatUSD(costBasis)}`,
+                position: 'insideTopLeft',
+                fill: '#f59e0b',
+                fontSize: 10,
+              }}
+            />
+          )}
         </AreaChart>
       </ResponsiveContainer>
     </div>

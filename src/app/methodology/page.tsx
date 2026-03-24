@@ -165,6 +165,14 @@ Lower Band  = SMA(20) − 2σ
           (oversold, potentially bullish). A high %B (price near upper band) scores low
           (overbought, potentially bearish).
         </P>
+        <SubHeading>Bandwidth (Volatility Indicator)</SubHeading>
+        <FormulaBlock>{`Bandwidth = (Upper − Lower) / Middle`}</FormulaBlock>
+        <P>
+          Bandwidth measures the width of the bands relative to the middle band. A very low bandwidth
+          ({"<"}8%) indicates a <strong className="text-amber-300">Bollinger Squeeze</strong> — a
+          period of unusually low volatility that often precedes a significant price breakout in either
+          direction. Traders use squeezes as a signal to watch for an imminent move.
+        </P>
       </div>
 
       {/* ── Data Source ─────────────────────────────────────────────────── */}

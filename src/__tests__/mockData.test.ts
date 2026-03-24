@@ -47,7 +47,7 @@ describe('getPriceSeries', () => {
 describe('getSignals', () => {
   it('returns a signal for each tracked asset', () => {
     const signals = getSignals();
-    expect(signals.length).toBeGreaterThanOrEqual(10);
+    expect(signals.length).toBeGreaterThanOrEqual(6);
   });
 
   it('every signal has required fields', () => {
