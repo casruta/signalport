@@ -286,13 +286,21 @@ export function movingAverages(closes: number[]): MovingAverageResult {
 /**
  * Composite score (0–100) combining multiple indicators.
  *
- * Weighting:
- *   RSI            30%
- *   MACD           30%
- *   Price vs SMAs  25%
- *   Bollinger %B   15%
+ * Weighting (chosen so that RSI oversold can independently trigger a BUY):
+ *   RSI            40%  — momentum oscillator; highest weight as primary signal
+ *   MACD           25%  — trend confirmation
+ *   Price vs SMAs  20%  — trend direction
+ *   Bollinger %B   15%  — volatility-adjusted position
  *
- * Returns a score where > 60 → BUY, < 40 → SELL, otherwise HOLD.
+ * Thresholds:
+ *   score > 52 → BUY   (RSI oversold + BB oversold = 40+15 = 55 > 52 ✓)
+ *   score < 42 → SELL  (RSI overbought + BB overbought = 0+0 + trend = 35 < 42 ✓)
+ *   42–52     → HOLD
+ *
+ * Design rationale: RSI and Bollinger %B are "oversold/overbought" indicators
+ * that can independently fire a contrarian BUY/SELL signal even when trend
+ * indicators (MACD, SMAs) are still bearish/bullish — which is the correct
+ * technical analysis approach for mean-reversion trades.
  */
 export function compositeScore(
   closes: number[],
@@ -304,18 +312,17 @@ export function compositeScore(
 
   const price = closes[closes.length - 1];
 
-  // RSI sub-score: 0 = very overbought, 100 = very oversold (inverted for buy bias)
-  // RSI < 30 → bullish (high score), RSI > 70 → bearish (low score)
+  // RSI sub-score: 0 = fully overbought (RSI 100), 100 = fully oversold (RSI 0)
   const rsiScore = Math.max(0, Math.min(100, 100 - rsiResult.value));
 
-  // MACD sub-score: histogram direction and magnitude
+  // MACD sub-score: positive histogram = bullish momentum
   const macdAbsMax = Math.abs(macdResult.macd) + 0.001;
   const macdScore =
     macdResult.histogram > 0
       ? 50 + Math.min(50, (macdResult.histogram / macdAbsMax) * 50)
       : 50 - Math.min(50, (Math.abs(macdResult.histogram) / macdAbsMax) * 50);
 
-  // Price vs SMA sub-score: price above both SMAs is bullish
+  // SMA sub-score: price above both SMAs = bullish trend
   let smaScore = 50;
   if (!isNaN(maResult.sma50) && !isNaN(maResult.sma200)) {
     const aboveSma50 = price > maResult.sma50 ? 25 : 0;
@@ -323,15 +330,14 @@ export function compositeScore(
     smaScore = aboveSma50 + aboveSma200;
   }
 
-  // Bollinger %B sub-score: low %B = oversold (bullish)
-  // %B near 0 → 100 score (buy), %B near 1 → 0 score (sell)
+  // Bollinger %B sub-score: %B near 0 (lower band) = oversold = bullish
   const bbScore = Math.max(0, Math.min(100, (1 - bbResult.percentB) * 100));
 
   const score =
-    rsiScore * 0.3 + macdScore * 0.3 + smaScore * 0.25 + bbScore * 0.15;
+    rsiScore * 0.40 + macdScore * 0.25 + smaScore * 0.20 + bbScore * 0.15;
 
   const direction: SignalDirection =
-    score > 60 ? 'BUY' : score < 40 ? 'SELL' : 'HOLD';
+    score > 52 ? 'BUY' : score < 42 ? 'SELL' : 'HOLD';
 
   return { score: parseFloat(score.toFixed(1)), direction };
 }

@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 
 function FormulaBlock({ children }: { children: React.ReactNode }) {
   return (
-    <pre className="text-sm font-mono p-4 rounded-lg overflow-x-auto my-4" style={{ background: 'var(--bg-secondary)', color: '#a5b4fc' }}>
+    <pre className="text-sm font-mono p-4 rounded-lg overflow-x-auto my-4 leading-relaxed" style={{ background: '#0d1117', color: '#e2e8f0', border: '1px solid var(--border)' }}>
       {children}
     </pre>
   );
@@ -37,15 +37,20 @@ export default function MethodologyPage() {
           then weighted and normalized to produce a 0–100 score where:
         </P>
         <ul className="list-disc list-inside text-sm space-y-1 mb-4" style={{ color: 'var(--text-secondary)' }}>
-          <li><strong className="text-white">Score &gt; 60</strong> → <span className="text-emerald-400">BUY</span> signal</li>
-          <li><strong className="text-white">Score 40–60</strong> → <span className="text-amber-400">HOLD</span> signal</li>
-          <li><strong className="text-white">Score &lt; 40</strong> → <span className="text-red-400">SELL</span> signal</li>
+          <li><strong className="text-white">Score &gt; 52</strong> → <span className="text-emerald-400">BUY</span> signal</li>
+          <li><strong className="text-white">Score 42–52</strong> → <span className="text-amber-400">HOLD</span> signal</li>
+          <li><strong className="text-white">Score &lt; 42</strong> → <span className="text-red-400">SELL</span> signal</li>
         </ul>
+        <P>
+          RSI and Bollinger %B receive higher combined weight (55%) so that an oversold condition
+          can independently trigger a BUY signal even when trend indicators (MACD, SMAs) are still
+          declining — supporting mean-reversion entries at the end of corrections.
+        </P>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           {[
-            { label: 'RSI', weight: '30%' },
-            { label: 'MACD', weight: '30%' },
-            { label: 'Moving Avgs', weight: '25%' },
+            { label: 'RSI', weight: '40%' },
+            { label: 'MACD', weight: '25%' },
+            { label: 'Moving Avgs', weight: '20%' },
             { label: 'Bollinger %B', weight: '15%' },
           ].map(({ label, weight }) => (
             <div key={label} className="text-center p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>

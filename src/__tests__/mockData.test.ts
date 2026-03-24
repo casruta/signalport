@@ -84,11 +84,11 @@ describe('getSignals', () => {
   it('score drives direction correctly', () => {
     const signals = getSignals();
     for (const s of signals) {
-      if (s.direction === 'BUY') expect(s.score).toBeGreaterThan(60);
-      if (s.direction === 'SELL') expect(s.score).toBeLessThan(40);
+      if (s.direction === 'BUY') expect(s.score).toBeGreaterThan(52);
+      if (s.direction === 'SELL') expect(s.score).toBeLessThan(42);
       if (s.direction === 'HOLD') {
-        expect(s.score).toBeGreaterThanOrEqual(40);
-        expect(s.score).toBeLessThanOrEqual(60);
+        expect(s.score).toBeGreaterThanOrEqual(42);
+        expect(s.score).toBeLessThanOrEqual(52);
       }
     }
   });

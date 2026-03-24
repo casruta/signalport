@@ -53,12 +53,13 @@ export function PortfolioChart({ data }: Props) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={strokeColor} stopOpacity={0.25} />
-              <stop offset="95%" stopColor={strokeColor} stopOpacity={0} />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity={0.35} />
+              <stop offset="60%" stopColor={strokeColor} stopOpacity={0.10} />
+              <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -75,7 +76,11 @@ export function PortfolioChart({ data }: Props) {
             tick={{ fontSize: 10, fill: '#5a6478' }}
             axisLine={false}
             tickLine={false}
-            width={45}
+            width={50}
+            domain={[
+              (dataMin: number) => Math.floor(dataMin * 0.97),
+              (dataMax: number) => Math.ceil(dataMax * 1.03),
+            ]}
           />
           <Tooltip
             contentStyle={{
@@ -93,7 +98,7 @@ export function PortfolioChart({ data }: Props) {
             type="monotone"
             dataKey="totalValue"
             stroke={strokeColor}
-            strokeWidth={1.5}
+            strokeWidth={2}
             fill={`url(#${fillId})`}
             dot={false}
             activeDot={{ r: 4, fill: strokeColor, stroke: 'none' }}
