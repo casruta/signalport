@@ -36,24 +36,26 @@ interface AssetDef {
   name: string;
   sector: string;
   startPrice: number;
-  mu: number;   // annualised drift (e.g. 0.12 = 12% per year)
-  sigma: number; // annualised volatility (e.g. 0.25 = 25%)
+  mu: number;        // annualised drift (e.g. 0.12 = 12% per year)
+  sigma: number;     // annualised volatility (e.g. 0.25 = 25%)
   seed: number;
+  // Optional: apply a sharp correction in the last `correctionBars` trading
+  // days to simulate a pullback. This produces oversold RSI → BUY signals.
+  correctionBars?: number;  // number of trailing bars with bearish regime
+  correctionMu?: number;    // annualised drift during correction (negative = falling)
 }
 
 const ASSETS: AssetDef[] = [
-  { ticker: 'AAPL',  name: 'Apple Inc.',            sector: 'Technology',    startPrice: 150, mu: 0.18, sigma: 0.28, seed: 1001 },
-  { ticker: 'MSFT',  name: 'Microsoft Corp.',        sector: 'Technology',    startPrice: 310, mu: 0.20, sigma: 0.25, seed: 1002 },
-  { ticker: 'GOOGL', name: 'Alphabet Inc.',          sector: 'Technology',    startPrice: 130, mu: 0.15, sigma: 0.30, seed: 1003 },
-  { ticker: 'AMZN',  name: 'Amazon.com Inc.',        sector: 'Consumer',      startPrice: 140, mu: 0.22, sigma: 0.35, seed: 1004 },
-  { ticker: 'NVDA',  name: 'NVIDIA Corp.',           sector: 'Technology',    startPrice: 200, mu: 0.45, sigma: 0.55, seed: 1005 },
-  { ticker: 'JPM',   name: 'JPMorgan Chase & Co.',   sector: 'Financials',    startPrice: 145, mu: 0.10, sigma: 0.22, seed: 1006 },
-  { ticker: 'JNJ',   name: 'Johnson & Johnson',      sector: 'Healthcare',    startPrice: 160, mu: 0.07, sigma: 0.18, seed: 1007 },
-  { ticker: 'XOM',   name: 'Exxon Mobil Corp.',      sector: 'Energy',        startPrice: 95,  mu: 0.08, sigma: 0.28, seed: 1008 },
-  { ticker: 'BRK.B', name: 'Berkshire Hathaway B',  sector: 'Financials',    startPrice: 330, mu: 0.11, sigma: 0.16, seed: 1009 },
-  { ticker: 'META',  name: 'Meta Platforms Inc.',    sector: 'Technology',    startPrice: 250, mu: 0.35, sigma: 0.42, seed: 1010 },
-  { ticker: 'TSLA',  name: 'Tesla Inc.',             sector: 'Consumer',      startPrice: 200, mu: 0.25, sigma: 0.65, seed: 1011 },
-  { ticker: 'LLY',   name: 'Eli Lilly & Co.',        sector: 'Healthcare',    startPrice: 400, mu: 0.38, sigma: 0.32, seed: 1012 },
+  // ── Strong uptrend → SELL (overbought)
+  { ticker: 'NVDA',  name: 'NVIDIA Corp.',           sector: 'Technology',    startPrice: 200, mu: 0.50, sigma: 0.55, seed: 1005 },
+  // ── Uptrend then sharp correction → oversold RSI → BUY
+  // Wilder smoothing requires long corrections (70+ bars) to overcome prior history
+  { ticker: 'AAPL',  name: 'Apple Inc.',             sector: 'Technology',    startPrice: 150, mu: 0.22, sigma: 0.28, seed: 1001, correctionBars: 75, correctionMu: -4.5 },
+  { ticker: 'MSFT',  name: 'Microsoft Corp.',        sector: 'Technology',    startPrice: 310, mu: 0.20, sigma: 0.25, seed: 1002, correctionBars: 65, correctionMu: -4.0 },
+  { ticker: 'JPM',   name: 'JPMorgan Chase & Co.',   sector: 'Financials',    startPrice: 145, mu: 0.12, sigma: 0.22, seed: 1006, correctionBars: 80, correctionMu: -3.5 },
+  { ticker: 'XOM',   name: 'Exxon Mobil Corp.',      sector: 'Energy',        startPrice: 95,  mu: 0.10, sigma: 0.28, seed: 1008, correctionBars: 70, correctionMu: -4.0 },
+  // ── Sideways / consolidating → HOLD
+  { ticker: 'TSLA',  name: 'Tesla Inc.',             sector: 'Consumer',      startPrice: 200, mu: 0.10, sigma: 0.65, seed: 1011 },
 ];
 
 // ─── Price Series Generation ──────────────────────────────────────────────────
@@ -65,6 +67,10 @@ function generateOHLCV(asset: AssetDef, bars = 260): OHLCV[] {
   const rand = mulberry32(asset.seed);
   const result: OHLCV[] = [];
   let close = asset.startPrice;
+
+  const correctionStart = asset.correctionBars
+    ? bars - asset.correctionBars
+    : bars + 1; // never triggers if no correction defined
 
   // Reference date: 260 trading days back from "today" (2024-01-01 proxy)
   const endMs = new Date('2024-12-31').getTime();
@@ -78,9 +84,15 @@ function generateOHLCV(asset: AssetDef, bars = 260): OHLCV[] {
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue; // skip weekends
 
+    // Use correction drift for the final `correctionBars` trading days
+    const mu =
+      tradingDay >= correctionStart && asset.correctionMu !== undefined
+        ? asset.correctionMu
+        : asset.mu;
+
     const z = boxMuller(rand);
     const dailyReturn = Math.exp(
-      (asset.mu - 0.5 * asset.sigma ** 2) * DT + asset.sigma * Math.sqrt(DT) * z,
+      (mu - 0.5 * asset.sigma ** 2) * DT + asset.sigma * Math.sqrt(DT) * z,
     );
     const open = close;
     close = open * dailyReturn;
@@ -194,6 +206,8 @@ export function getSignals(): Signal[] {
       bollingerUpper: bbResult.upper,
       bollingerMiddle: bbResult.middle,
       bollingerLower: bbResult.lower,
+      bollingerPercentB: parseFloat(bbResult.percentB.toFixed(3)),
+      bollingerBandwidth: parseFloat(bbResult.bandwidth.toFixed(3)),
       score: composite.score,
       generatedAt: new Date().toISOString(),
       rationale: buildRationale(
@@ -211,12 +225,14 @@ export function getSignals(): Signal[] {
 // ─── Portfolio Mock Data ──────────────────────────────────────────────────────
 
 export function getPortfolioPositions(): Position[] {
+  // Portfolio holds positions across all 6 tracked assets
   const holdings = [
-    { ticker: 'AAPL',  shares: 50,  avgCost: 142.50 },
-    { ticker: 'MSFT',  shares: 30,  avgCost: 285.00 },
-    { ticker: 'NVDA',  shares: 25,  avgCost: 180.00 },
-    { ticker: 'JPM',   shares: 40,  avgCost: 138.00 },
-    { ticker: 'LLY',   shares: 10,  avgCost: 350.00 },
+    { ticker: 'NVDA',  shares: 20,  avgCost: 195.00 },
+    { ticker: 'AAPL',  shares: 30,  avgCost: 135.00 },
+    { ticker: 'MSFT',  shares: 15,  avgCost: 285.00 },
+    { ticker: 'JPM',   shares: 25,  avgCost: 130.00 },
+    { ticker: 'XOM',   shares: 40,  avgCost: 85.00  },
+    { ticker: 'TSLA',  shares: 10,  avgCost: 185.00 },
   ];
 
   return holdings.map(({ ticker, shares, avgCost }) => {
@@ -237,11 +253,12 @@ export function getPortfolioPositions(): Position[] {
 export function getPortfolioHistory(): PortfolioSnapshot[] {
   // Use 90 days of portfolio history
   const positions = [
-    { ticker: 'AAPL', shares: 50, avgCost: 142.50 },
-    { ticker: 'MSFT', shares: 30, avgCost: 285.00 },
-    { ticker: 'NVDA', shares: 25, avgCost: 180.00 },
-    { ticker: 'JPM',  shares: 40, avgCost: 138.00 },
-    { ticker: 'LLY',  shares: 10, avgCost: 350.00 },
+    { ticker: 'NVDA',  shares: 20,  avgCost: 195.00 },
+    { ticker: 'AAPL',  shares: 30,  avgCost: 135.00 },
+    { ticker: 'MSFT',  shares: 15,  avgCost: 285.00 },
+    { ticker: 'JPM',   shares: 25,  avgCost: 130.00 },
+    { ticker: 'XOM',   shares: 40,  avgCost: 85.00  },
+    { ticker: 'TSLA',  shares: 10,  avgCost: 185.00 },
   ];
 
   const series: { [ticker: string]: OHLCV[] } = {};

@@ -40,6 +40,8 @@ export interface Signal {
   bollingerUpper: number;
   bollingerMiddle: number;
   bollingerLower: number;
+  bollingerPercentB: number; // (price − lower) / (upper − lower), 0=lower band, 1=upper band
+  bollingerBandwidth: number; // (upper - lower) / middle
   score: number;             // composite signal score 0–100
   generatedAt: string;       // ISO datetime
   rationale: string;

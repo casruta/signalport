@@ -186,21 +186,20 @@ describe('compositeScore', () => {
   });
 
   it('overbought linear uptrend gives SELL direction (RSI near 100)', () => {
-    // A perfectly linear uptrend has RSI ≈ 100 (overbought) → SELL signal.
-    // This is technically correct: overbought markets are at risk of reversal.
+    // A perfectly linear uptrend has RSI ≈ 100 → rsiScore ≈ 0 → low composite.
+    // With RSI weight at 40%, an overbought RSI strongly pushes score below 42 (SELL).
     const prices = Array.from({ length: 260 }, (_, i) => 10 + i * 2);
     const { direction, score } = compositeScore(prices);
-    // Score should be < 40 because RSI sub-score ≈ 0 dominates
-    expect(score).toBeLessThan(50);
+    expect(score).toBeLessThan(52);
     expect(direction).toBe('SELL');
   });
 
   it('oversold linear downtrend gives BUY direction (RSI near 0)', () => {
-    // A perfectly linear downtrend has RSI ≈ 0 (oversold) → BUY signal.
-    // RSI sub-score = 100 - 0 = 100, which dominates the composite score.
+    // RSI ≈ 0 → rsiScore = 100 → contributes 40 to score.
+    // BB also oversold → bbScore ≈ 100 → contributes 15. Total ≥ 55 > 52 → BUY.
     const prices = Array.from({ length: 260 }, (_, i) => 600 - i * 2);
-    const { score } = compositeScore(prices);
-    // Score should be > 50 because RSI sub-score dominates
-    expect(score).toBeGreaterThan(40);
+    const { score, direction } = compositeScore(prices);
+    expect(score).toBeGreaterThan(52);
+    expect(direction).toBe('BUY');
   });
 });

@@ -3,6 +3,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PortfolioChart } from '@/components/dashboard/PortfolioChart';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopSignalsTable } from '@/components/dashboard/TopSignalsTable';
 import Link from 'next/link';
 
@@ -75,7 +76,9 @@ export default function DashboardPage() {
       {/* ── Portfolio Chart + Signal Distribution ─────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <PortfolioChart data={history} />
+          <ErrorBoundary>
+            <PortfolioChart data={history} costBasis={totalCost} />
+          </ErrorBoundary>
         </div>
 
         {/* Signal Distribution */}

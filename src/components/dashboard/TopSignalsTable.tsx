@@ -31,13 +31,23 @@ export function TopSignalsTable({ title, signals }: Props) {
                   {s.name}
                 </p>
               </div>
-              <div className="text-right ml-3 flex-shrink-0">
-                <p className="text-sm font-semibold text-white">
-                  ${s.price.toFixed(2)}
-                </p>
-                <p className={`text-xs font-medium ${s.priceChangePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {s.priceChangePct >= 0 ? '+' : ''}{s.priceChangePct.toFixed(2)}%
-                </p>
+              <div className="flex items-center gap-3 ml-3 flex-shrink-0">
+                <div className="text-center hidden sm:block">
+                  <p
+                    className={`text-sm font-bold font-mono ${s.score > 60 ? 'text-emerald-400' : s.score < 40 ? 'text-red-400' : 'text-amber-400'}`}
+                  >
+                    {s.score}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>score</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-white">
+                    ${s.price.toFixed(2)}
+                  </p>
+                  <p className={`text-xs font-medium ${s.priceChangePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {s.priceChangePct >= 0 ? '+' : ''}{s.priceChangePct.toFixed(2)}%
+                  </p>
+                </div>
               </div>
             </Link>
           ))}
